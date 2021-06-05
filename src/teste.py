@@ -9,83 +9,6 @@ tf.disable_v2_behavior()
 import time
 from matplotlib import pyplot as plt
 
-# class QNetwork():
-#     def __init__(self, state_dim, action_size):
-
-
-#         # self.input = tf.placeholder(dtype=tf.float32, shape=(None, ) + self.states, name='input')
-#         # self.q_true = tf.placeholder(dtype=tf.float32, shape=[None], name='labels')
-#         # self.a_true = tf.placeholder(dtype=tf.int32, shape=[None], name='actions')
-#         # self.reward = tf.placeholder(dtype=tf.float32, shape=[], name='reward')
-
-
-
-#         self.state_in = tf.placeholder(dtype=tf.float32, shape=(None, ) + state_dim)
-#         self.action_in = tf.placeholder(tf.int32, shape=[None])
-#         self.q_target_in = tf.placeholder(tf.float32, shape=[None])
-#         action_one_hot = tf.one_hot(self.action_in, depth=action_size)
-        
-#         self.hidden1 = tf.layers.dense(self.state_in, 100, activation=tf.nn.relu)
-#         self.q_state = tf.layers.dense(self.hidden1, action_size, activation=None)
-#         self.q_state_action = tf.reduce_sum(tf.multiply(self.q_state, action_one_hot), axis=1)
-        
-#         self.loss = tf.reduce_mean(tf.square(self.q_state_action - self.q_target_in))
-#         self.optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(self.loss)
-
-#     def update_model(self, session, state, action, q_target):
-#         feed = {self.state_in: state, self.action_in: action, self.q_target_in: q_target}
-#         session.run(self.optimizer, feed_dict=feed)
-    
-#     def get_q_state(self, session, state):
-#         q_state = session.run(self.q_state, feed_dict={self.state_in: state})
-#         return q_state
-
-# class ReplayBuffer():
-#     def __init__(self, maxlen):
-#         self.buffer = deque(maxlen=maxlen)
-        
-#     def add(self, experience):
-#         self.buffer.append(experience)
-        
-#     def sample(self, batch_size):
-#         sample_size = min(len(self.buffer), batch_size)
-#         samples = random.choices(self.buffer, k=sample_size)
-#         return map(list, zip(*samples))
-
-# class DQNAgent():
-#     def __init__(self, env):
-#         self.state_dim = env.observation_space.shape
-#         self.action_size = env.action_space.n
-#         self.q_network = QNetwork(self.state_dim, self.action_size)
-#         self.replay_buffer = ReplayBuffer(maxlen=10000)
-#         self.gamma = 0.97
-#         self.eps = 1.0
-        
-#         self.sess = tf.Session()
-#         self.sess.run(tf.global_variables_initializer())
-        
-#     def get_action(self, state):
-#         q_state = self.q_network.get_q_state(self.sess, [state])
-#         action_greedy = np.argmax(q_state)
-#         action_random = np.random.randint(self.action_size)
-#         action = action_random if random.random() < self.eps else action_greedy
-#         return action
-    
-#     def train(self, state, action, next_state, reward, done):
-#         self.replay_buffer.add((state, action, next_state, reward, done))
-#         states, actions, next_states, rewards, dones = self.replay_buffer.sample(50)
-#         q_next_states = self.q_network.get_q_state(self.sess, next_states)
-#         q_next_states[dones] = np.zeros([self.action_size])
-#         q_targets = rewards + self.gamma * np.max(q_next_states, axis=1)
-#         self.q_network.update_model(self.sess, states, actions, q_targets)
-        
-#         if done: self.eps = max(0.1, 0.99*self.eps)
-    
-#     def __del__(self):
-#         self.sess.close()
-
-
-
 class DQNAgent:
     """ DQN agent """
     def __init__(self, states, actions, max_memory, double_q):
@@ -156,7 +79,7 @@ class DQNAgent:
     def predict(self, model, state):
             """ Prediction """
             if model == 'online':
-                return self.session.run(fetches=self.output, feed_dict={self.input: state})
+                return self.session.run(fetches=self.output, feed_dict={self.input: np.array(state)})
             if model == 'target':
                 return self.session.run(fetches=self.output_target, feed_dict={self.input: np.array(state)})
     def run(self, state):
@@ -218,7 +141,7 @@ class DQNAgent:
 #main
 env = gym.make('Contra-v0')
 env = JoypadSpace(env, RIGHT_ONLY)
-actions = (84, 84, 4)
+actions = (240, 256, 3)
 
 print("actions", env.action_space)
 print("observation_space ", env.observation_space.shape[0])
