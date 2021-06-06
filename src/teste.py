@@ -142,11 +142,12 @@ class DQNAgent:
 env = gym.make('Contra-v0')
 env = JoypadSpace(env, RIGHT_ONLY)
 actions = (240, 256, 3)
+rewards = []
 
 print("actions", env.action_space)
 print("observation_space ", env.observation_space.shape[0])
 
-agent = DQNAgent(actions, env.action_space.n, max_memory=100000, double_q=True)
+agent = DQNAgent(actions, env.action_space.n, max_memory=1000, double_q=True)
 
 for ep in range(1000):
     state = env.reset()
@@ -161,5 +162,4 @@ for ep in range(1000):
         env.render()
         total_reward += reward
         state = next_state
-        
     print("Episode: {}, total_reward: {:.2f}".format(ep, total_reward))
