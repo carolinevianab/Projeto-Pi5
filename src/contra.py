@@ -1,3 +1,5 @@
+# --- Responsavel pela inicialização do agente, pela sua rede neural DQN, e seu treinamento --- #
+
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import time
@@ -8,9 +10,9 @@ import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 from matplotlib import pyplot as plt
 
-
 class DQNAgent:
     """ DQN agent """
+    # faz a inicialização de todas as coisas necessarias para treinamento, como: as ações do agente, a montagem da rede neural ...
     def __init__(self, states, actions, max_memory, double_q):
         self.states = states
         self.actions = actions
@@ -40,7 +42,7 @@ class DQNAgent:
         self.a_true = tf.placeholder(dtype=tf.int32, shape=[None], name='actions')
         self.reward = tf.placeholder(dtype=tf.float32, shape=[], name='reward')
         self.input_float = tf.to_float(self.input) / 255.
-        # Online network
+        # Online network -> rede neural principal.
         with tf.variable_scope('online'):
             self.conv_1 = tf.layers.conv2d(inputs=self.input_float, filters=32, kernel_size=8, strides=4, activation=tf.nn.relu)
             self.conv_2 = tf.layers.conv2d(inputs=self.conv_1, filters=64, kernel_size=4, strides=2, activation=tf.nn.relu)
@@ -48,7 +50,7 @@ class DQNAgent:
             self.flatten = tf.layers.flatten(inputs=self.conv_3)
             self.dense = tf.layers.dense(inputs=self.flatten, units=512, activation=tf.nn.relu)
             self.output = tf.layers.dense(inputs=self.dense, units=self.actions, name='output')
-        # Target network
+        # Target network -> rede neural usada para setar os "Q_values"(pontuação) para as ações. essa rede neural ajuda no output da rede neural principal.
         with tf.variable_scope('target'):
             self.conv_1_target = tf.layers.conv2d(inputs=self.input_float, filters=32, kernel_size=8, strides=4, activation=tf.nn.relu)
             self.conv_2_target = tf.layers.conv2d(inputs=self.conv_1_target, filters=64, kernel_size=4, strides=2, activation=tf.nn.relu)
@@ -56,12 +58,12 @@ class DQNAgent:
             self.flatten_target = tf.layers.flatten(inputs=self.conv_3_target)
             self.dense_target = tf.layers.dense(inputs=self.flatten_target, units=512, activation=tf.nn.relu)
             self.output_target = tf.stop_gradient(tf.layers.dense(inputs=self.dense_target, units=self.actions, name='output_target'))
-        # Optimizer
+        # Optimizer -> contem as informações para fazer o treinamento do modelo.
         self.action = tf.argmax(input=self.output, axis=1)
         self.q_pred = tf.gather_nd(params=self.output, indices=tf.stack([tf.range(tf.shape(self.a_true)[0]), self.a_true], axis=1))
         self.loss = tf.losses.huber_loss(labels=self.q_true, predictions=self.q_pred)
         self.train = tf.train.AdamOptimizer(learning_rate=0.00025).minimize(self.loss)
-        # Summaries
+        # Summaries -> contem um resumo com as principais informações da session do TF
         self.summaries = tf.summary.merge([
             tf.summary.scalar('reward', self.reward),
             tf.summary.scalar('loss', self.loss),
@@ -70,7 +72,7 @@ class DQNAgent:
         self.writer = tf.summary.FileWriter(logdir='./logs', graph=self.session.graph)
 
     def copy_model(self):
-        """ Copy weights to target network """
+        """ Copy weights to target network """ #-> copia os pesos da rede neural principal, para a target network
         self.session.run([tf.assign(new, old) for (new, old) in zip(tf.trainable_variables('target'), tf.trainable_variables('online'))])
 
     def save_model(self):
@@ -78,11 +80,11 @@ class DQNAgent:
         self.saver.save(sess=self.session, save_path='./models/model', global_step=self.step)
 
     def add(self, experience):
-        """ Add observation to experience """
+        """ Add observation to experience """ #-> adiciona a observação atual do agente no ambiente na sua experiencia.
         self.memory.append(experience)
 
     def predict(self, model, state):
-        """ Prediction """
+        """ Prediction """ #-> com a session do TF, tenta adivinhar qual a melhor ação para o estado atual.
         if model == 'online':
             return self.session.run(fetches=self.output, feed_dict={self.input: np.array(state)})
         if model == 'target':
@@ -90,22 +92,25 @@ class DQNAgent:
 
     def run(self, state):
         """ Perform action """
-        if np.random.rand() < self.eps:
+        if np.random.rand() < self.eps: #epsilon -> diz o quão o agente é provavel em tomar uma ação aleatória, oq ajuda no aprendizado.
             # Random action
             action = np.random.randint(low=0, high=self.actions)
         else:
             # Policy action
-            q = self.predict('online', np.expand_dims(state, 0))
-            action = np.argmax(q)
+            q = self.predict('online', np.expand_dims(state, 0)) # retorna as ações com as melhores pontuações
+            action = np.argmax(q) # -> ação com o maior valor de q
         # Decrease eps
-        self.eps *= self.eps_decay
-        self.eps = max(self.eps_min, self.eps)
+        self.eps *= self.eps_decay # vai diminuindo o epsilon para forçar o agente a tomar ações aleatórias.
+        self.esp = max(self.eps_min, self.eps) # não deixa ser menor q o limite.
         # Increment step
         self.step += 1
         return action
 
     def learn(self):
         """ Gradient descent """
+        
+        ## Responsavel pelo treinamento
+
         # Sync target network
         if self.step % self.copy == 0:
             self.copy_model()
@@ -120,18 +125,18 @@ class DQNAgent:
             self.learn_step += 1
             return
         # Sample batch
-        batch = random.sample(self.memory, self.batch_size)
-        state, next_state, action, reward, done = map(np.array, zip(*batch))
+        batch = random.sample(self.memory, self.batch_size) # -> lote(pedaço) da mémoria da rede neural
+        state, next_state, action, reward, done = map(np.array, zip(*batch)) # -> retorna os valores para suas devidas variaveis
         # Get next q values from target network
-        next_q = self.predict('target', next_state)
+        next_q = self.predict('target', next_state) # -> usa a rede neural 'target' que vai prever o q_value
         # Calculate discounted future reward
-        if self.double_q:
+        if self.double_q: # -> double_q -> trabalha com duas tabelas de Q_Value, auxiliando no treinamento
             q = self.predict('online', next_state)
             a = np.argmax(q, axis=1)
-            target_q = reward + (1. - done) * self.gamma * next_q[np.arange(0, self.batch_size), a]
+            target_q = reward + (1. - done) * self.gamma * next_q[np.arange(0, self.batch_size), a] # faz o calculo(bellman) do "q_value"(pontuação) para a ação.
         else:
-            target_q = reward + (1. - done) * self.gamma * np.amax(next_q, axis=1)
-        # Update model
+            target_q = reward + (1. - done) * self.gamma * np.amax(next_q, axis=1) # same as up comment #
+        # Update model -> atualiza o sumario do modelo.
         summary, _ = self.session.run(fetches=[self.summaries, self.train],
                                       feed_dict={self.input: state,
                                                  self.q_true: np.array(target_q),
@@ -143,7 +148,7 @@ class DQNAgent:
         self.writer.add_summary(summary, self.step)
 
     def replay(self, env, model_path, n_replay, plot):
-        """ Model replay """
+        """ Model replay """ # -> tem a função salva as transições dos estados.
         ckpt = tf.train.latest_checkpoint(model_path)
         saver = tf.train.import_meta_graph(ckpt + '.meta')
         graph = tf.get_default_graph()
@@ -152,7 +157,7 @@ class DQNAgent:
         # Replay RL agent
         state = env.reset()
         total_reward = 0
-        with tf.Session() as sess:
+        with tf.Session() as sess: # -> usa o Session do TF para ajudar no treinamento tbm
             saver.restore(sess, ckpt)
             for _ in range(n_replay):
                 step = 0
@@ -180,7 +185,7 @@ class DQNAgent:
         env.close()
 
     def visualize_layer(self, session, layer, state, step):
-        """ Visualization auf Conv Layers"""
+        """ Visualization auf Conv Layers""" # -> faz a vizualização das camadas; auxilia o método "def replay"
         units = session.run(layer, feed_dict={self.input: np.expand_dims(state, 0)})
         filters = units.shape[3]
         plt.figure(1, figsize=(40, 40))

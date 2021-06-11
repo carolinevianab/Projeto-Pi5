@@ -1,0 +1,6 @@
+gym-contra==0.1.1
+matplotlib==3.4.2
+nes-py==8.1.6
+numpy==1.19.5
+opencv-python==4.5.2.54
+tensorflow==2.5.0
