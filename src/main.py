@@ -6,10 +6,9 @@ from Contra.actions import SIMPLE_MOVEMENT, COMPLEX_MOVEMENT, RIGHT_ONLY
 from contra import DQNAgent
 from wrappers import wrapper
 
-
-# Build env (first level, right only)
+# Build env (first level, simple movement)
 env = gym.make('Contra-v0')
-env = JoypadSpace(env, RIGHT_ONLY)
+env = JoypadSpace(env, SIMPLE_MOVEMENT)
 env = wrapper(env)
 
 # Parameters
