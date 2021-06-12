@@ -148,7 +148,7 @@ class DQNAgent:
         self.writer.add_summary(summary, self.step)
 
     def replay(self, env, model_path, n_replay, plot):
-        """ Model replay """ # -> tem a função salva as transições dos estados.
+        """ Model replay """ # -> método que roda o agente com o modelo salvo
         ckpt = tf.train.latest_checkpoint(model_path)
         saver = tf.train.import_meta_graph(ckpt + '.meta')
         graph = tf.get_default_graph()
@@ -157,7 +157,7 @@ class DQNAgent:
         # Replay RL agent
         state = env.reset()
         total_reward = 0
-        with tf.Session() as sess: # -> usa o Session do TF para ajudar no treinamento tbm
+        with tf.Session() as sess:
             saver.restore(sess, ckpt)
             for _ in range(n_replay):
                 step = 0
@@ -185,7 +185,7 @@ class DQNAgent:
         env.close()
 
     def visualize_layer(self, session, layer, state, step):
-        """ Visualization auf Conv Layers""" # -> faz a vizualização das camadas; auxilia o método "def replay"
+        """ Visualization auf Conv Layers"""
         units = session.run(layer, feed_dict={self.input: np.expand_dims(state, 0)})
         filters = units.shape[3]
         plt.figure(1, figsize=(40, 40))
