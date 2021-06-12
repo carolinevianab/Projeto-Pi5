@@ -162,12 +162,12 @@ class DQNAgent:
             for _ in range(n_replay):
                 step = 0
                 while True:
-                    time.sleep(0.05)
+                    time.sleep(0.01)
                     env.render()
                     # Plot
-                    if plot:
-                        if step % 100 == 0:
-                            self.visualize_layer(session=sess, layer=self.conv_2, state=state, step=step)
+                    #if plot:
+                    #    if step % 100 == 0:
+                    #        self.visualize_layer(session=sess, layer=self.conv_2, state=state, step=step)
                     # Action
                     if np.random.rand() < 0.0:
                         action = np.random.randint(low=0, high=self.actions, size=1)[0]
@@ -178,8 +178,8 @@ class DQNAgent:
                     total_reward += reward
                     state = next_state
                     step += 1
-                    if info['flag_get']:
-                        break
+                    #if info['flag_get']:
+                    #    break
                     if done:
                         break
         env.close()
